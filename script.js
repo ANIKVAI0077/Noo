@@ -66,32 +66,30 @@ function updateReceipt(donation){
 document.getElementById('downloadPdf').addEventListener('click', () => {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  const el = document.querySelector('.receipt');
-  doc.html(el, { x: 10, y: 10, callback: function(doc) { doc.save('receipt.pdf'); } });
+  const receipt = document.querySelector('.receipt');
+  doc.html(receipt, {
+    callback: function (doc) {
+      doc.save(`receipt_${Date.now()}.pdf`);
+    },
+    x: 10,
+    y: 10
+  });
 });
 
-// Print
 document.getElementById('printReceipt').addEventListener('click', () => {
-  const printWindow = window.open('', '_blank');
-  printWindow.document.write('<html><head><title>রিসিট</title></head><body>');
-  printWindow.document.write(document.querySelector('.receipt').outerHTML);
-  printWindow.document.write('</body></html>');
-  printWindow.document.close();
-  printWindow.print();
+  const w = window.open();
+  w.document.write(document.querySelector('.receipt').outerHTML);
+  w.print();
+  w.close();
 });
 
 // =========================
-// Donation List Table
+// Donation Table
 // =========================
-function updateDonationTable(filterName="", filterMonth=""){
+function updateDonationTable(){
   const data = JSON.parse(localStorage.getItem(DONATIONS_KEY) || "[]");
-  let filtered = data;
-  if(filterName) filtered = filtered.filter(d => d.name.includes(filterName));
-  if(filterMonth) filtered = filtered.filter(d => d.date.startsWith(filterMonth));
-  const tableDiv = document.getElementById('donationTable');
-  if(filtered.length===0) { tableDiv.innerHTML="কোনো রেকর্ড নেই"; return; }
-  let html = '<table><tr><th>নাম</th><th>মোবাইল</th><th>পরিমাণ</th><th>তারিখ</th><th>পেমেন্ট</th><th>নোট</th></tr>';
-  filtered.forEach(d => {
+  let html = `<table><tr><th>নাম</th><th>ফোন</th><th>পরিমাণ</th><th>তারিখ</th><th>পেমেন্ট</th><th>নোট</th></tr>`;
+  data.forEach(d => {
     html += `<tr>
       <td>${d.name}</td>
       <td>${d.phone || "-"}</td>
@@ -101,164 +99,175 @@ function updateDonationTable(filterName="", filterMonth=""){
       <td>${d.note || "-"}</td>
     </tr>`;
   });
-  html += '</table>';
-  tableDiv.innerHTML = html;
+  html += "</table>";
+  document.getElementById('donationTable').innerHTML = html;
 }
-document.getElementById('applyFilter').addEventListener('click', () => {
-  const name = document.getElementById('filterName').value;
+document.getElementById('applyFilter').addEventListener('click', ()=>{
+  const name = document.getElementById('filterName').value.toLowerCase();
   const month = document.getElementById('filterMonth').value;
-  updateDonationTable(name, month);
-});
-
-// =========================
-// Accounts
-// =========================
-let expenses = JSON.parse(localStorage.getItem(EXPENSES_KEY) || "[]");
-
-function updateAccounts() {
-  const donations = JSON.parse(localStorage.getItem(DONATIONS_KEY) || "[]");
-  const totalIncome = donations.reduce((sum,d)=>sum+d.amount,0);
-  const totalExpense = expenses.reduce((sum,e)=>sum+parseFloat(e.amount),0);
-  document.getElementById('totalIncome').textContent = totalIncome;
-  document.getElementById('totalExpense').textContent = totalExpense;
-  document.getElementById('balance').textContent = totalIncome - totalExpense;
-
-  const logDiv = document.getElementById('accountsLog');
-  let html = '<table><tr><th>বিবরণ</th><th>পরিমাণ</th><th>তারিখ</th></tr>';
-  expenses.forEach(e => {
-    html += `<tr><td>${e.desc}</td><td>${e.amount}</td><td>${e.date}</td></tr>`;
+  let data = JSON.parse(localStorage.getItem(DONATIONS_KEY) || "[]");
+  if(name) data = data.filter(d => d.name.toLowerCase().includes(name));
+  if(month) data = data.filter(d => d.date.startsWith(month));
+  let html = `<table><tr><th>নাম</th><th>ফোন</th><th>পরিমাণ</th><th>তারিখ</th><th>পেমেন্ট</th><th>নোট</th></tr>`;
+  data.forEach(d => {
+    html += `<tr>
+      <td>${d.name}</td>
+      <td>${d.phone || "-"}</td>
+      <td>${d.amount}</td>
+      <td>${d.date}</td>
+      <td>${d.method}</td>
+      <td>${d.note || "-"}</td>
+    </tr>`;
   });
-  html += '</table>';
-  logDiv.innerHTML = html;
-}
-
-document.getElementById('addExpense').addEventListener('click', () => {
-  const desc = document.getElementById('expenseDesc').value;
-  const amount = document.getElementById('expenseAmount').value;
-  const date = document.getElementById('expenseDate').value;
-  if(!desc || !amount || !date) return alert("সব ফিল্ড পূরণ করুন");
-  expenses.push({desc, amount, date});
-  localStorage.setItem(EXPENSES_KEY, JSON.stringify(expenses));
-  document.getElementById('expenseDesc').value='';
-  document.getElementById('expenseAmount').value='';
-  document.getElementById('expenseDate').value='';
-  updateAccounts();
+  html += "</table>";
+  document.getElementById('donationTable').innerHTML = html;
 });
 
 // =========================
 // Members
 // =========================
 function updateMembersTable(){
-  const members = JSON.parse(localStorage.getItem(MEMBERS_KEY) || "[]");
-  const div = document.getElementById('membersTable');
-  if(members.length===0){ div.innerHTML="কোনো মেম্বার নেই"; return; }
-  let html = '<table><tr><th>নাম</th><th>পদবি</th><th>মোবাইল</th></tr>';
-  members.forEach(m => {
+  const data = JSON.parse(localStorage.getItem(MEMBERS_KEY) || "[]");
+  let html = `<table><tr><th>নাম</th><th>পদবি</th><th>মোবাইল</th></tr>`;
+  data.forEach(m => {
     html += `<tr><td>${m.name}</td><td>${m.role}</td><td>${m.phone || "-"}</td></tr>`;
   });
-  html += '</table>';
-  div.innerHTML = html;
+  html += "</table>";
+  document.getElementById('membersTable').innerHTML = html;
 }
 
-document.getElementById('saveMember').addEventListener('click', () => {
-  const name = document.getElementById('memberName').value;
-  const role = document.getElementById('memberRole').value;
-  const phone = document.getElementById('memberPhone').value;
-  if(!name || !role) return alert("নাম এবং পদবি দিন");
-  const members = JSON.parse(localStorage.getItem(MEMBERS_KEY) || "[]");
-  members.push({name, role, phone});
-  localStorage.setItem(MEMBERS_KEY, JSON.stringify(members));
-  document.getElementById('memberName').value='';
-  document.getElementById('memberRole').value='';
-  document.getElementById('memberPhone').value='';
+document.getElementById('saveMember').addEventListener('click', ()=>{
+  const member = {
+    id: Date.now(),
+    name: document.getElementById('memberName').value,
+    role: document.getElementById('memberRole').value,
+    phone: document.getElementById('memberPhone').value
+  };
+  const data = JSON.parse(localStorage.getItem(MEMBERS_KEY) || "[]");
+  data.push(member);
+  localStorage.setItem(MEMBERS_KEY, JSON.stringify(data));
   updateMembersTable();
-  updateReports();
+  document.getElementById('memberName').value="";
+  document.getElementById('memberRole').value="";
+  document.getElementById('memberPhone').value="";
 });
 
 // =========================
-// Reports
+// Accounts
 // =========================
-function updateReports(){
-  const donations = JSON.parse(localStorage.getItem(DONATIONS_KEY) || "[]");
-  const members = JSON.parse(localStorage.getItem(MEMBERS_KEY) || "[]");
-  const thisMonth = new Date().toISOString().slice(0,7);
-  const monthlyDonations = donations.filter(d => d.date.startsWith(thisMonth));
-  document.getElementById('reportThisMonth').textContent = monthlyDonations.reduce((sum,d)=>sum+d.amount,0);
-  document.getElementById('reportReceipts').textContent = donations.length;
-  document.getElementById('reportMembers').textContent = members.length;
+function updateAccounts(){
+  const donations = JSON.parse(localStorage.getItem(DONATIONS_KEY)||"[]");
+  const expenses = JSON.parse(localStorage.getItem(EXPENSES_KEY)||"[]");
+  const income = donations.reduce((sum,d)=>sum+d.amount,0);
+  const expenseSum = expenses.reduce((sum,e)=>sum+e.amount,0);
+  document.getElementById('totalIncome').textContent = income;
+  document.getElementById('totalExpense').textContent = expenseSum;
+  document.getElementById('balance').textContent = income - expenseSum;
+
+  let html=`<table><tr><th>বিবরণ</th><th>পরিমাণ</th><th>তারিখ</th></tr>`;
+  expenses.forEach(e=>{
+    html+=`<tr><td>${e.desc}</td><td>${e.amount}</td><td>${e.date}</td></tr>`;
+  });
+  html+="</table>";
+  document.getElementById('accountsLog').innerHTML = html;
 }
 
-// =========================
-// Backup
-// =========================
-document.getElementById('exportBackup').addEventListener('click', ()=>{
-  const data = {
-    donations: JSON.parse(localStorage.getItem(DONATIONS_KEY)||"[]"),
-    expenses: JSON.parse(localStorage.getItem(EXPENSES_KEY)||"[]"),
-    members: JSON.parse(localStorage.getItem(MEMBERS_KEY)||"[]"),
-    notices: JSON.parse(localStorage.getItem(NOTICES_KEY)||"[]")
+document.getElementById('addExpense').addEventListener('click', ()=>{
+  const expense = {
+    id: Date.now(),
+    desc: document.getElementById('expenseDesc').value,
+    amount: parseFloat(document.getElementById('expenseAmount').value),
+    date: document.getElementById('expenseDate').value
   };
-  const blob = new Blob([JSON.stringify(data,null,2)], {type:"application/json"});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download="backup.json";
-  a.click();
-});
-
-// Import Backup
-document.getElementById('importBackup').addEventListener('click', ()=>{
-  const file = document.getElementById('importFile').files[0];
-  if(!file) return alert("ফাইল নির্বাচন করুন");
-  const reader = new FileReader();
-  reader.onload = e => {
-    const data = JSON.parse(e.target.result);
-    localStorage.setItem(DONATIONS_KEY, JSON.stringify(data.donations||[]));
-    localStorage.setItem(EXPENSES_KEY, JSON.stringify(data.expenses||[]));
-    localStorage.setItem(MEMBERS_KEY, JSON.stringify(data.members||[]));
-    localStorage.setItem(NOTICES_KEY, JSON.stringify(data.notices||[]));
-    alert("ডেটা ইমপোর্ট সম্পন্ন");
-    updateDonationTable();
-    updateAccounts();
-    updateMembersTable();
-    updateReports();
-    updateNotices();
-  };
-  reader.readAsText(file);
+  const data = JSON.parse(localStorage.getItem(EXPENSES_KEY)||"[]");
+  data.push(expense);
+  localStorage.setItem(EXPENSES_KEY, JSON.stringify(data));
+  updateAccounts();
 });
 
 // =========================
 // Notices
 // =========================
 function updateNotices(){
-  const notices = JSON.parse(localStorage.getItem(NOTICES_KEY)||"[]");
-  const div = document.getElementById('notices');
-  if(notices.length===0){ div.innerHTML="কোনো নোটিস নেই"; return; }
-  let html = '<table><tr><th>শিরোনাম</th><th>বিবরণ</th></tr>';
-  notices.forEach(n=>{
-    html += `<tr><td>${n.title}</td><td>${n.body}</td></tr>`;
+  const data = JSON.parse(localStorage.getItem(NOTICES_KEY)||"[]");
+  let html="";
+  data.forEach(n=>{
+    html+=`<div class="card small"><strong>${n.title}</strong><p>${n.body}</p></div>`;
   });
-  html += '</table>';
-  div.innerHTML = html;
+  document.getElementById('notices').innerHTML = html;
 }
 
 document.getElementById('saveNotice').addEventListener('click', ()=>{
-  const title = document.getElementById('noticeTitle').value;
-  const body = document.getElementById('noticeBody').value;
-  if(!title || !body) return alert("শিরোনাম এবং বিবরণ দিন");
-  const notices = JSON.parse(localStorage.getItem(NOTICES_KEY)||"[]");
-  notices.push({title, body});
-  localStorage.setItem(NOTICES_KEY, JSON.stringify(notices));
-  document.getElementById('noticeTitle').value='';
-  document.getElementById('noticeBody').value='';
+  const notice = {
+    id: Date.now(),
+    title: document.getElementById('noticeTitle').value,
+    body: document.getElementById('noticeBody').value
+  };
+  const data = JSON.parse(localStorage.getItem(NOTICES_KEY)||"[]");
+  data.push(notice);
+  localStorage.setItem(NOTICES_KEY, JSON.stringify(data));
   updateNotices();
+  document.getElementById('noticeTitle').value="";
+  document.getElementById('noticeBody').value="";
 });
 
 // =========================
-// Initialize
+// Backup Export / Import
+// =========================
+document.getElementById('exportBackup').addEventListener('click', ()=>{
+  const backup = {
+    donations: JSON.parse(localStorage.getItem(DONATIONS_KEY)||"[]"),
+    expenses: JSON.parse(localStorage.getItem(EXPENSES_KEY)||"[]"),
+    members: JSON.parse(localStorage.getItem(MEMBERS_KEY)||"[]"),
+    notices: JSON.parse(localStorage.getItem(NOTICES_KEY)||"[]")
+  };
+  const blob = new Blob([JSON.stringify(backup,null,2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download="backup.json";
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('importBackup').addEventListener('click', ()=>{
+  const file = document.getElementById('importFile').files[0];
+  if(!file) return alert("ফাইল নির্বাচন করুন");
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const backup = JSON.parse(e.target.result);
+    localStorage.setItem(DONATIONS_KEY, JSON.stringify(backup.donations||[]));
+    localStorage.setItem(EXPENSES_KEY, JSON.stringify(backup.expenses||[]));
+    localStorage.setItem(MEMBERS_KEY, JSON.stringify(backup.members||[]));
+    localStorage.setItem(NOTICES_KEY, JSON.stringify(backup.notices||[]));
+    updateDonationTable();
+    updateAccounts();
+    updateMembersTable();
+    updateNotices();
+    alert("ব্যাকআপ ইমপোর্ট সম্পন্ন");
+  }
+  reader.readAsText(file);
+});
+
+// =========================
+// Reports
+// =========================
+function updateReports(){
+  const donations = JSON.parse(localStorage.getItem(DONATIONS_KEY)||"[]");
+  const members = JSON.parse(localStorage.getItem(MEMBERS_KEY)||"[]");
+  const thisMonth = new Date().toISOString().slice(0,7);
+  const monthTotal = donations.filter(d=>d.date.startsWith(thisMonth)).reduce((sum,d)=>sum+d.amount,0);
+  document.getElementById('reportThisMonth').textContent = monthTotal;
+  document.getElementById('reportReceipts').textContent = donations.length;
+  document.getElementById('reportMembers').textContent = members.length;
+}
+
+// =========================
+// Init
 // =========================
 document.getElementById('year').textContent = new Date().getFullYear();
 updateDonationTable();
 updateAccounts();
 updateMembersTable();
-updateReports();
 updateNotices();
+updateReports();
